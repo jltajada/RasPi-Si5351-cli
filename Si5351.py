@@ -2,6 +2,7 @@
 from Adafruit_I2C import Adafruit_I2C
 import smbus
 import time
+import math
 
 SI5351_REGISTER_0_DEVICE_STATUS                       = 0
 SI5351_REGISTER_1_INTERRUPT_STATUS_STICKY             = 1
@@ -285,6 +286,26 @@ class Si5351(object):
         # Enabled desired outputs (see Register 3)
         val = 0x00 if enabled else 0xFF
         self.i2c.write8(SI5351_REGISTER_3_OUTPUT_ENABLE_CONTROL, val)
+
+    def setFreq(self, pll, output, freqMHz):
+      # set the output frequency
+      synthDiv = int(math.ceil(600/freqMHz))
+      if(synthDiv < 6): # Si5351 requires it to be between 6 and 1800
+        synthDiv += 6 - synthDiv
+      if(synthDiv > 1800): # Si5351 requires it to be between 6 and 1800
+        raise ValueError("synthDiv > 1800, calculated as: " + str(synthDiv))
+      intFreq = freqMHz*synthDiv # intermediate PLL frequency
+      if(intFreq > 900):
+        raise ValueError("Error calculating multisynth divisor for " + str(freqMHz) + " tried " + str(synthDiv))
+      pllMult = intFreq/25 # PLL multiplier as a floating point number
+      pllBase = int(pllMult) # base multiplier for the PLL
+      if((pllBase < 15) or (pllBase > 90)):
+        raise ValueError("pllBase outside of [0,90], calculated as: " + str(pllBase))
+      pllDenom = 1000000 # PLL multiplier denominator
+      pllNum = int(math.modf(pllMult)[0]*pllDenom) # PLL multiplier numerator
+      self.setupPLL(pll, pllBase, pllNum, pllDenom)
+      self.setupMultisynth(output, pll, synthDiv)
+      
 
 
 if __name__ == '__main__':
