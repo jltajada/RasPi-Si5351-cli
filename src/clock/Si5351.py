@@ -1,7 +1,11 @@
 
-from Adafruit_I2C import Adafruit_I2C
-import smbus
-import time
+from src.clock.Adafruit_I2C import Adafruit_I2C
+try:
+    import smbus
+except ImportError:
+    print('Warning: running with mocked SMBus')
+    from lib.mocks.rpidevmocks import Mock_smbusModule
+    smbus = Mock_smbusModule()
 import math
 
 SI5351_REGISTER_0_DEVICE_STATUS                       = 0
@@ -311,7 +315,7 @@ class Si5351(object):
 if __name__ == '__main__':
     si = Si5351()
 
-    print "Set Output #0 to 13.703704 MHz"  
+    print("Set Output #0 to 13.703704 MHz")
 
     # vco = 25 MHz * (24 + 2 / 3) = 616.67 MHz
     si.setupPLL(si.PLL_A, 24, 2, 3)
